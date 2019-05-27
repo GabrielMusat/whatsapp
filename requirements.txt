@@ -1,0 +1,8 @@
+flask
+python-socketio
+eventlet
+selenium
+cryptography
+python-axolotl
+python-magic-bin
+numpy
