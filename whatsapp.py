@@ -28,7 +28,7 @@ class Whatsapp:
         self.chats = {'Andromeda': '34662934560-1530867316@g.us', 'Yisas': '34652543310@c.us'}
         self.last_responses = {'Andromeda': time.time(), 'Yisas': time.time()}
         logger.info('launching whatsapp...')
-        self.driver = WhatsAPIDriver(client='chrome', profile=PROFILE_PATH, headless=True)
+        self.driver = WhatsAPIDriver(client='chrome', profile=PROFILE_PATH, headless=False)
         self.driver.wait_for_login(timeout=45)
         logger.info('whatsapp launched succesfully')
 
