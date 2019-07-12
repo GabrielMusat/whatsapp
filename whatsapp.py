@@ -24,7 +24,7 @@ if not os.path.isdir(PROFILE_PATH): os.mkdir(PROFILE_PATH)
 class Whatsapp:
     def __init__(self):
         self.chats = {'Andromeda': '34662934560-1530867316@g.us', 'Yisas': '34652543310@c.us', '0_0': '34649883062-1545836929@g.us'}
-        self.last_responses = {'Andromeda': time.time(), 'Yisas': time.time(), '0_0': ''}
+        self.last_responses = {'Andromeda': time.time(), 'Yisas': time.time(), '0_0': time.time()}
         logger.info('launching whatsapp...')
         self.driver = WhatsAPIDriver(client='chrome', profile=PROFILE_PATH, headless=False)
         self.driver.wait_for_login(timeout=45)
