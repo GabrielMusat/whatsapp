@@ -1,4 +1,5 @@
 import socketio
+import asyncio
 from aiohttp import web
 from lib.WebWhatsapp_Wrapper.webwhatsapi import WhatsAPIDriver
 from lib.logger import Logger
@@ -70,7 +71,7 @@ class Whatsapp:
                     self.last_responses[chat] = time.time()
                 except Exception as e:
                     logger.error(f'error in search of new messages of chat {chat}: {e}')
-            time.sleep(1)
+            await asyncio.sleep(1)
 
 
 whatsapp = Whatsapp()
