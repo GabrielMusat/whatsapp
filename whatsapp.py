@@ -1,18 +1,16 @@
 import socketio
-from flask import Flask, request
+from aiohttp import web
 from lib.WebWhatsapp_Wrapper.webwhatsapi import WhatsAPIDriver
 from lib.logger import Logger
-import eventlet
-import eventlet.wsgi
 import os
 import time
-eventlet.monkey_patch()
 
 logger = Logger('whatsapp')
 
-app = Flask(__name__)
-sio = socketio.Server(async_mode='threading')
-app.wsgi_app = socketio.Middleware(sio, app.wsgi_app)
+app = web.Application()
+sio = socketio.AsyncServer(async_mode='aiohttp')
+sio.attach(app)
+
 
 clients = []
 
@@ -22,11 +20,11 @@ PROFILE_PATH = os.path.join(os.path.split(__file__)[0], 'chrome_session')
 if not os.path.isdir(FILES): os.mkdir(FILES)
 if not os.path.isdir(PROFILE_PATH): os.mkdir(PROFILE_PATH)
 
-
+# 'Arantxa': '34662934560@c.us'
 class Whatsapp:
     def __init__(self):
-        self.chats = {'Andromeda': '34662934560-1530867316@g.us', 'Yisas': '34652543310@c.us'}
-        self.last_responses = {'Andromeda': time.time(), 'Yisas': time.time()}
+        self.chats = {'Andromeda': '34662934560-1530867316@g.us', 'Yisas': '34652543310@c.us', '0_0': '34649883062-1545836929@g.us'}
+        self.last_responses = {'Andromeda': time.time(), 'Yisas': time.time(), '0_0': ''}
         logger.info('launching whatsapp...')
         self.driver = WhatsAPIDriver(client='chrome', profile=PROFILE_PATH, headless=False)
         self.driver.wait_for_login(timeout=45)
@@ -54,7 +52,7 @@ class Whatsapp:
         except Exception as e:
             logger.error(f'error sending file {file_path} to chat {chat}: {e}')
 
-    def run(self):
+    async def run(self):
         while True:
             for chat in self.chats:
                 try:
@@ -68,20 +66,19 @@ class Whatsapp:
                     except Exception as e:
                         logger.warning(f'message has no content, must be a media file: {e}')
                         continue
-                    sio.emit(chat, msg_content)
+                    await sio.emit(chat, msg_content)
                     self.last_responses[chat] = time.time()
                 except Exception as e:
                     logger.error(f'error in search of new messages of chat {chat}: {e}')
-            eventlet.sleep(1)
+            time.sleep(1)
 
 
 whatsapp = Whatsapp()
 
 
-@app.route('/file', methods=['POST'])
-def handleSendFile():
+async def handleSendFile(request):
     logger.info(f'file send requested')
-    params = request.args.to_dict()
+    params = request.rel_url.query
     assert 'chat' in params, Exception('chat not in params')
     file = request.files['file']
     logger.info(f'saving file {file.filename} to {FILES}')
@@ -91,19 +88,18 @@ def handleSendFile():
     whatsapp.file(params['chat'], file_path, params['caption'] if 'caption' in params else '')
     logger.info(f'file sent correctly')
     whatsapp.last_responses[params['chat']] = time.time()
-    return 'ok'
+    return web.Response(text='ok')
 
 
-@app.route('/msg', methods=['POST'])
-def handleSendMsg():
+async def handleSendMsg(request):
     logger.info(f'message send requested')
-    params = request.args.to_dict()
+    params = request.rel_url.query
     assert 'chat' in params, Exception('chat not in params')
     assert 'msg' in params, Exception('msg not in params')
     whatsapp.msg(params['chat'], params['msg'])
     logger.info(f'message sent correctly')
     whatsapp.last_responses[params['chat']] = time.time()
-    return 'ok'
+    return web.Response(text='ok')
 
 
 @sio.on('connect')
@@ -120,6 +116,11 @@ def handleDisconnect(sid):
     logger.info(f'client {sid} disconnected :( {f"{len(clients)} clients still connected" if len(clients) > 0 else "there are no clients connected"}')
 
 
+app.add_routes([
+    web.post('/file', handleSendFile),
+    web.post('/msg', handleSendMsg)
+])
+
 if __name__ == '__main__':
-    eventlet.spawn(whatsapp.run)
-    eventlet.wsgi.server(eventlet.listen(('', 4000)), app)
+    sio.start_background_task(whatsapp.run)
+    web.run_app(app, host='0.0.0.0', port=4000)

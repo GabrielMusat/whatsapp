@@ -1,6 +1,5 @@
-flask
+aiohttp
 python-socketio
-eventlet
 selenium
 cryptography
 python-axolotl
