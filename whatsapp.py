@@ -80,11 +80,20 @@ async def handleSendFile(request):
     logger.info(f'file send requested')
     params = request.rel_url.query
     assert 'chat' in params, Exception('chat not in params')
-    file = request.files['file']
-    logger.info(f'saving file {file.filename} to {FILES}')
+
+    reader = await request.multipart()
+    file = await reader.next()
+    if file.name != 'file':
+        logger.warning(f'se ha pasado un archivo que no tiene el nombre {file.name} en vez de file')
+        return web.Response(text=f'se ha detectado el campo {file.name}, solo se permite el campo "file"', status=400)
+
     file_path = os.path.join(FILES, file.filename)
-    logger.info(f'saved')
-    file.save(file_path)
+    with open(file_path, 'wb') as f:
+        while True:
+            chunk = await file.read_chunk()
+            if not chunk: break
+            f.write(chunk)
+
     whatsapp.file(params['chat'], file_path, params['caption'] if 'caption' in params else '')
     logger.info(f'file sent correctly')
     whatsapp.last_responses[params['chat']] = time.time()
